@@ -86,36 +86,36 @@ def main():
             emg=1e-4, ref_meg=1e-12, misc=1e-3, stim=1,
             resp=1, chpi=1e-4, whitened=1e2)
 
-    messagebox.showinfo(message="Selecciona el archivo vhdr", title="Seleccion de datos")
-    path = easygui.fileopenbox(title='Seleccione vhdr')#selecciono la carpeta vhdr
-    subject = get_name(path)
-    
-    mne.set_log_level("WARNING")
-    raw= mne.io.read_raw_brainvision(path, 
-        preload=True, 
-        eog=('EOG1_1','EOG2_1'),
-        misc=('EMG1_1','EMG2_1'),
-        verbose=True)
-    raw.rename_channels(lambda s: s.strip("."))
-
-    info = raw.info
-    sfreq = info.get('sfreq') #frecuencia de muestreo
-    
     anotaciones = messagebox.askquestion(message="El archivo ya posee anotaciones?", title="Anotaciones")
-    if (anotaciones == 'yes'):
+    if (anotaciones == 'no'):
+        messagebox.showinfo(message="Selecciona el archivo vhdr", title="Seleccion de datos")
+        path = easygui.fileopenbox(title='Seleccione vhdr')#selecciono la carpeta vhdr
+
+        mne.set_log_level("WARNING")
+        raw= mne.io.read_raw_brainvision(path, 
+            preload=True, 
+            eog=('EOG1_1','EOG2_1'),
+            misc=('EMG1_1','EMG2_1'),
+            verbose=True)
+        raw.rename_channels(lambda s: s.strip("."))
+    
         messagebox.showinfo(message="Selecciona txt con etapas de sueño", title="Seleccion de Etapas de sueño")
-        path_annotations = easygui.fileopenbox(title='Seleccione txt con anotaciones') #selecciono el txt de anotaciones anteriores
-        raw.set_annotations(mne.read_annotations(path_annotations))
-    elif(anotaciones == 'no'):
-        messagebox.showinfo(message="Selecciona el txt con anotaciones", title="Seleccion de anotaciones")
-        path_states = easygui.fileopenbox(title='Seleccione txt con etapa de sueño') #selecciono el txt de estados de sueño
+        path_states = easygui.fileopenbox(title='Seleccione txt con anotaciones') #selecciono el txt de anotaciones anteriores
         raw = set_sleep_states(raw,path_states)
 
-    # -----------------------------------------------------------------
+        info = raw.info
+        sfreq = info.get('sfreq') #frecuencia de muestreo
+        raw = new_raw_data(raw,sfreq)
 
-    info = raw.info
-    sfreq = info.get('sfreq') #frecuencia de muestreo
-    raw = new_raw_data(raw,sfreq)
+    elif(anotaciones == 'yes'): #evita pasar por todo lo mismo de nuevo 
+        messagebox.showinfo(message="Selecciona el archivo fif", title="Seleccion de datos")
+        path = easygui.fileopenbox(title='Seleccione fif')#selecciono la carpeta vhdr
+        raw = mne.io.read_raw_fif(path)
+
+        messagebox.showinfo(message="Selecciona el txt con anotaciones", title="Seleccion de anotaciones")
+        path_annotations = easygui.fileopenbox(title='Seleccione txt con etapa de sueño') #selecciono el txt de estados de sueño
+        raw.set_annotations(mne.read_annotations(path_annotations))
+
   
     subject = get_name(path)
     info = raw.info
