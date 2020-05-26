@@ -34,11 +34,11 @@ def set_sleep_states(raw,path):
     description = np.zeros((cant_anotations))  #array descripcion de la etiqueta
     start = 0
     for i in range(cant_anotations):
-        start= start + 30 #* sfreq
         onset[i] = start
         duration[i] = 30 #* sfreq
         description[i] = estados[i]
-
+        start= start + 30 #* sfreq
+        
     states_anotations = mne.Annotations(onset,duration,description)    #<Annotations | 136 segments: 0.0 (50), 1.0 (20), 2.0 (42), 3.0 (24)>
     raw2 = raw.copy().set_annotations(states_anotations)
     
