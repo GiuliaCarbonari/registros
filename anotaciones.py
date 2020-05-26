@@ -111,8 +111,7 @@ def main():
     scal = dict(mag=1e-12, grad=4e-11, eeg=20e-5, eog=150e-6, ecg=5e-4,emg=1e-4, ref_meg=1e-12, misc=1e-3, stim=1,
         resp=1, chpi=1e-4, whitened=1e2)
 
-    #pplot=new_raw.plot(scalings=scal, duration=30, n_channels=10, block=True, )
-        
+    #pplot=new_raw.plot(scalings=scal, duration=30, n_channels=10, block=True)
     new_raw.plot(show_options=True,title='Etiquetado',start=0,duration=30,n_channels=10, scalings=scal,block=True)
     new_raw.annotations.save(subject + "Annotations.txt")
 
