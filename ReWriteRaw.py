@@ -1,18 +1,18 @@
 # %%
-#  "import" de las librerías que vamos a estar usando.
 import os
 import numpy as np
 import mne
-from properties import filename
-
+#from properties import filename
+import matplotlib.pyplot as plt                     # Este codigo es un plot basico para ver la señal, los datos concretos.
 from matplotlib.transforms import Bbox
+from scipy import signal
+import matplotlib.pyplot as plt
 
+mne.sys_info()     #chequear sistema
 
-# versión de MNE, chequear que estamos usando mne3
-mne.sys_info()
 # Acá leemos un archivo particular
 mne.set_log_level("WARNING")
-raw= mne.io.read_raw_brainvision('C:\\Users\\julia\\Desktop\\Tesis\\Registros\\RCnew\\ExpS11.vhdr',
+raw= mne.io.read_raw_brainvision('C:/Users/Nicola/Documents/eeg/VISBRAIN/ExpS35.vhdr',
     preload=True, 
     eog=('EOG1_1','EOG2_1'),
     misc=('EMG1_1','EMG2_1'),
@@ -20,75 +20,34 @@ raw= mne.io.read_raw_brainvision('C:\\Users\\julia\\Desktop\\Tesis\\Registros\\R
 raw.rename_channels(lambda s: s.strip("."))
 
 # -----------------------------------------------------------------
-# data(chan,samp), times(1xsamples)
+data =raw.get_data()         # data(chan,samp), times(1xsamples)
+info = raw.info              #info
+sfreq = info.get('sfreq')    #frecuencia de muestreo
 
-# (1) Aca voy a ver los datos en crudo, ploteandolos por afuera de MNE.  Fijense que los datos estan en Volts lo paso a microvolts.
-
-channel = 0
-eeg = raw[channel][0][0][0:250*4]  * pow(10,6)      # Tomo 4 segundos.
-
-
-import matplotlib.pyplot as plt                     # Este codigo es un plot basico para ver la señal, los datos concretos.
-fig = plt.figure()
-ax1 = fig.add_subplot(111)
-
-#ax1.plot(eeg,'r', label='EEG')
-plt.legend(loc='upper left')
-plt.show(block=False)
-
-#a = raw.plot(show_options=True,title='KComplex2',start=504,duration=30,n_channels=10, scalings=dict(eeg=20e-6))
-# chequean que la frecuencia de sampleo sea la esperada
-print('Sampling Frequency: %d' %  raw.info['sfreq'] )
-
-#pplot = raw.plot(scalings='auto',n_channels=10,block=True, )
-from scipy import signal
-import matplotlib.pyplot as plt
-t = np.linspace(0, 3318, 663804, endpoint=False)    #me creo mi señal con pulso de 0.5 seg
-plt.plot(t, signal.square(2 * np.pi * 1 * t))
-plt.ylim(-2, 2)
-
-# (2) Con este código extraigo los datos que necesito y me rearmo la estructura que necesito para poder analizarlo mejor
-data =raw.get_data()                            # Saco los datos concretos, una matriz de numpy
-print(data[0:5])
+#Con este código extraigo los datos que necesito y me rearmo la estructura que necesito para poder analizarlo mejor
+data =raw.get_data()                                 # Saco los datos concretos, una matriz de numpy
+new_data=data.copy()
 canal_eogs = data[6,:] - data[7,:]                   # Cree la variable de la resta de las dos señales
 canal_emgs =  data[8,:] - data[9,:]
-data[6]=canal_eogs
-data[7]=canal_emgs
-data[8]=signal.square(2 * np.pi * 1 * t)
-data=data[[0,1,2,3,4,5,6,7,8], :]
-new_ch_names =[ raw.ch_names[0], raw.ch_names[1],raw.ch_names[2] , raw.ch_names[3],  raw.ch_names[4],  raw.ch_names[5], "EOG_resta", "EMG_resta", "Pulso"] 
+t = np.linspace(1, round(data.shape[1]/sfreq), data.shape[1], endpoint=False)   
+new_data[0]= signal.square(2 * np.pi * 1 * t)
+new_data[1]=data[[0], :]
+new_data[2]=data[[1], :]
+new_data[3]=canal_eogs
+new_data[4]=canal_emgs
 
+new_data=new_data[[0,1,2,3,4], :]        #Elimino los otros canales
 
-ch_names = ['Supera75'] + new_ch_names              # Saco el nombre de los canales pero agrego uno 'peak'
-sfreq = raw.info['sfreq']
+new_chnames =[ "Pulso", raw.ch_names[0], raw.ch_names[1], "EOG_resta", "EMG_resta"] 
+new_chtypes = ['misc'] +['eeg' for _ in new_chnames[0:2]] + ['misc','misc'] # Recompongo los canales.
 
+new_info = mne.create_info(new_chnames, sfreq, ch_types=new_chtypes)
+new_info['meas_date'] = raw.info['meas_date']       # Registro el timestamp para las anotaciones.
 
-dat = np.concatenate( (np.zeros((1,data.shape[1])), data), axis=0)    # Le agrego a los datos un array con zeros.
+new_raw=mne.io.RawArray(new_data, new_info)
+new_raw.set_annotations(raw.annotations)           # Construyo un nuevo objeto raw que tiene lo que necesito.
 
-                                                                # aca si ustedes quieren pueden agregarle 20 o algo asi
-                                                                      # cada vez que la señal que ustedes analizan supera los 75
+scal = dict(mag=1e-12, grad=4e-11, eeg=20e-5, eog=150e-6, ecg=5e-4,emg=1e-4, ref_meg=1e-12, misc=1e-3, stim=1,
+    resp=1, chpi=1e-4, whitened=1e2)
 
-
-
-
-dat = np.concatenate( (np.zeros ((1, canal_eogs.shape[0])), data), axis=0) 
-dat = np.concatenate( (np.zeros ((1, canal_emgs.shape[0])), data), axis=0) 
-
-ch_types = ['misc'] + ['eeg' for _ in ch_names[0:6]] + ['misc','misc'] + ['misc']  # Recompongo los canales.
-info = mne.create_info(ch_names, sfreq, ch_types=ch_types)
-
-
-
-info['meas_date'] = raw.info['meas_date']       # Registro el timestamp para las anotaciones.
-
-reraw = mne.io.RawArray(dat, info)
-reraw.set_annotations(raw.annotations)          # Construyo un nuevo objeto raw que tiene lo que necesito.
-
-#reraw.plot(scalings='auto',n_channels=10,block=True, )
-#pplot=reraw.plot(scalings='auto', n_channels=10, block=True, )
-
-reraw_copy=reraw.copy()
-reraw_copy.drop_channels(['F3_1','F4_1','P3_1','P4_1'])
-pplot=reraw_copy.plot(scalings='auto', duration=30, n_channels=10, block=True, )
-
-# POR Ejemplo con esto pueden restar EMG1 y EMG2 y dejar solo uno, lo mismo con EOG.
+pplot=new_raw.plot(scalings=scal, duration=30, n_channels=10, block=True, )
