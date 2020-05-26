@@ -95,7 +95,7 @@ def main():
     data=data[[0,1,2,3,4,5,6,7,8], :]
     new_ch_names =[ raw.ch_names[0], raw.ch_names[1],raw.ch_names[2] , raw.ch_names[3],  raw.ch_names[4],  raw.ch_names[5], "EOG_resta", "EMG_resta", "Pulso"] 
     ch_names = ['Supera75'] + new_ch_names              # Saco el nombre de los canales pero agrego uno 'peak'
-
+    #ch_names = new_ch_names 
     dat = np.concatenate( (np.zeros((1,data.shape[1])), data), axis=0)    # Le agrego a los datos un array con zeros.
     dat = np.concatenate( (np.zeros ((1, canal_emgs.shape[0])), data), axis=0) 
 
